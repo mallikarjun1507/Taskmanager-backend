@@ -61,7 +61,7 @@ export const login = async (req, res, next) => {
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "None"
     })
 
@@ -114,7 +114,7 @@ export const refreshToken = async (req, res, next) => {
 
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       sameSite: "None"
     })
     res.json({ accessToken: newAccessToken,user: {
@@ -148,7 +148,7 @@ export const logout = async (req, res, next) => {
     res.clearCookie("refreshToken", {
       httpOnly: true,
       sameSite: "None",
-      secure: process.env.NODE_ENV === "production"
+      secure: true
     })
 
     res.json({ message: "Logged out successfully" })
