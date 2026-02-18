@@ -62,7 +62,9 @@ export const login = async (req, res, next) => {
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "None"
+      sameSite: "None",
+      path: "/",
+  maxAge: 7 * 24 * 60 * 60 * 1000 // very important
     })
 
     res.json({
@@ -115,7 +117,9 @@ export const refreshToken = async (req, res, next) => {
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
       secure: true,
-      sameSite: "None"
+      sameSite: "None",
+      path: "/",
+  maxAge: 7 * 24 * 60 * 60 * 1000 // very important
     })
     res.json({ accessToken: newAccessToken,user: {
         id: user._id,
