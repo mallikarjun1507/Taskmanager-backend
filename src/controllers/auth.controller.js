@@ -64,6 +64,8 @@ export const login = async (req, res, next) => {
       secure: true,
       sameSite: "None",
       path: "/",
+        domain: "taskmanager-backend-u0mq.onrender.com", // 🔥 ADD THIS
+
   maxAge: 7 * 24 * 60 * 60 * 1000 // very important
     })
 
@@ -119,6 +121,8 @@ export const refreshToken = async (req, res, next) => {
       secure: true,
       sameSite: "None",
       path: "/",
+        domain: "taskmanager-backend-u0mq.onrender.com", // 🔥 ADD THIS
+
   maxAge: 7 * 24 * 60 * 60 * 1000 // very important
     })
     res.json({ accessToken: newAccessToken,user: {
