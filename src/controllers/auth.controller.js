@@ -20,7 +20,6 @@ export const register = async (req, res, next) => {
     if (existingUser)
       return res.status(400).json({ message: "Email already exists" })
 
-    //  DO NOT HASH HERE
     const user = await User.create({
       name,
       email,
@@ -59,20 +58,9 @@ export const login = async (req, res, next) => {
     user.refreshToken = refreshToken
     await user.save()
 
-    res.json({
+    return res.json({
       accessToken,
-      refreshToken, // 🔥 send to frontend
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
-    })
-
-
-    res.json({
-      accessToken,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -82,43 +70,45 @@ export const login = async (req, res, next) => {
     })
 
   } catch (error) {
-    console.error(" LOGIN ERROR:", error)
+    console.error("LOGIN ERROR:", error)
     next(error)
   }
 }
 
-
 /* =========================
    REFRESH TOKEN (ROTATION)
 ========================= */
-export const refreshToken = async (req, res, next) => {
+export const refreshToken = async (req, res) => {
   try {
     const { refreshToken } = req.body
 
     if (!refreshToken)
       return res.status(401).json({ message: "No refresh token" })
 
-
+    // VERIFY TOKEN
     const decoded = jwt.verify(
-      token,
+      refreshToken,
       process.env.JWT_REFRESH_SECRET
     )
 
     const user = await User.findById(decoded.id)
       .select("+refreshToken")
-    const email = user.email
 
+    if (!user)
+      return res.status(403).json({ message: "User not found" })
 
-    if (!user || user.refreshToken !== token)
+    // CHECK IF TOKEN MATCHES DB
+    if (user.refreshToken !== refreshToken)
       return res.status(403).json({ message: "Invalid refresh token" })
 
-    //  Token Rotation (Very Important)
+    // ROTATE TOKEN
     const newAccessToken = generateAccessToken(user)
     const newRefreshToken = generateRefreshToken(user)
+
     user.refreshToken = newRefreshToken
     await user.save()
 
-    res.json({
+    return res.json({
       accessToken: newAccessToken,
       refreshToken: newRefreshToken,
       user: {
@@ -129,15 +119,8 @@ export const refreshToken = async (req, res, next) => {
       }
     })
 
-    res.json({
-      accessToken: newAccessToken, user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
-    })
   } catch (error) {
+    console.log("REFRESH ERROR:", error.message)
     return res.status(403).json({ message: "Invalid or expired token" })
   }
 }
@@ -146,25 +129,34 @@ export const refreshToken = async (req, res, next) => {
    LOGOUT
 ========================= */
 export const logout = async (req, res) => {
-  const { refreshToken } = req.body
+  try {
+    const { refreshToken } = req.body
 
-  if (!refreshToken)
-    return res.json({ message: "Logged out" })
+    if (!refreshToken)
+      return res.json({ message: "Logged out" })
 
-  const user = await User.findOne({ refreshToken })
+    const user = await User.findOne({ refreshToken })
 
-  if (user) {
-    user.refreshToken = null
-    await user.save()
+    if (user) {
+      user.refreshToken = null
+      await user.save()
+    }
+
+    return res.json({ message: "Logged out successfully" })
+
+  } catch (error) {
+    return res.status(500).json({ message: "Logout failed" })
   }
-
-  res.json({ message: "Logged out successfully" })
 }
-
 
 /* =========================
    GET PROFILE
 ========================= */
 export const getProfile = async (req, res) => {
-  res.json(req.user)
+  return res.json({
+    id: req.user._id,
+    name: req.user.name,
+    email: req.user.email,
+    role: req.user.role
+  })
 }
