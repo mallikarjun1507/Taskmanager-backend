@@ -1,10 +1,10 @@
 import bcrypt from "bcryptjs"
+import jwt from "jsonwebtoken"
 import User from "../models/user.model.js"
 import {
   generateAccessToken,
   generateRefreshToken
 } from "../utils/generateTokens.js"
-import jwt from "jsonwebtoken"
 
 /* =========================
    REGISTER
@@ -59,15 +59,17 @@ export const login = async (req, res, next) => {
     user.refreshToken = refreshToken
     await user.save()
 
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      path: "/",
-        domain: "taskmanager-backend-u0mq.onrender.com", // 🔥 ADD THIS
-
-  maxAge: 7 * 24 * 60 * 60 * 1000 // very important
+    res.json({
+      accessToken,
+      refreshToken, // 🔥 send to frontend
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
     })
+
 
     res.json({
       accessToken,
@@ -91,19 +93,19 @@ export const login = async (req, res, next) => {
 ========================= */
 export const refreshToken = async (req, res, next) => {
   try {
-    const token = req.cookies.refreshToken
-    
+    const { refreshToken } = req.body
 
-    if (!token)
+    if (!refreshToken)
       return res.status(401).json({ message: "No refresh token" })
+
 
     const decoded = jwt.verify(
       token,
       process.env.JWT_REFRESH_SECRET
     )
-    
+
     const user = await User.findById(decoded.id)
-     .select("+refreshToken")
+      .select("+refreshToken")
     const email = user.email
 
 
@@ -116,21 +118,25 @@ export const refreshToken = async (req, res, next) => {
     user.refreshToken = newRefreshToken
     await user.save()
 
-    res.cookie("refreshToken", newRefreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      path: "/",
-        domain: "taskmanager-backend-u0mq.onrender.com", // 🔥 ADD THIS
-
-  maxAge: 7 * 24 * 60 * 60 * 1000 // very important
-    })
-    res.json({ accessToken: newAccessToken,user: {
+    res.json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      user: {
         id: user._id,
         name: user.name,
         email: user.email,
         role: user.role
-      } })
+      }
+    })
+
+    res.json({
+      accessToken: newAccessToken, user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }
+    })
   } catch (error) {
     return res.status(403).json({ message: "Invalid or expired token" })
   }
@@ -139,31 +145,22 @@ export const refreshToken = async (req, res, next) => {
 /* =========================
    LOGOUT
 ========================= */
-export const logout = async (req, res, next) => {
-  try {
-    const token = req.cookies.refreshToken
+export const logout = async (req, res) => {
+  const { refreshToken } = req.body
 
-    if (!token)
-      return res.json({ message: "Logged out" })
+  if (!refreshToken)
+    return res.json({ message: "Logged out" })
 
-    const user = await User.findOne({ refreshToken: token })
+  const user = await User.findOne({ refreshToken })
 
-    if (user) {
-      user.refreshToken = null
-      await user.save()
-    }
-
-    res.clearCookie("refreshToken", {
-      httpOnly: true,
-      sameSite: "None",
-      secure: true
-    })
-
-    res.json({ message: "Logged out successfully" })
-  } catch (error) {
-    next(error)
+  if (user) {
+    user.refreshToken = null
+    await user.save()
   }
+
+  res.json({ message: "Logged out successfully" })
 }
+
 
 /* =========================
    GET PROFILE
