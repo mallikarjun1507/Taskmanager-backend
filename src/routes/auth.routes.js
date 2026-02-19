@@ -32,6 +32,8 @@ router.post("/logout", logout)
 /* Get Current User Profile */
 router.get("/me", protect, getProfile)
 
+router.get("/profile", protect, getProfile)
+
 /* =========================
    GET USERS (For Task Assignment)
    Only ADMIN & MANAGER
